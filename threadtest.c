@@ -3,33 +3,51 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-// Let us create a global variable to change it in threads
-int g = 0;
+struct thread_args {
+    char a;
+    int b;
+    int *c;
+};
 
-// The function to be executed by all threads
-void *myThreadFun(void *vargp) {
-    // Store the value argument passed to this thread
-    int *myid = (int *)vargp;
+void *thread_1(void *arg) {
+    struct thread_args *args = (struct thread_args *)arg;
+    printf("Nous sommes dans le thread. '%c' '%d'\n", args->a, args->b);
+    int *ptr = args->c;
+    printf("Adresse de a: %p\n", ptr);
 
-    // Let us create a static variable to observe its changes
-    static int s = 0;
+    *ptr = 6;
 
-    // Change static and global variables
-    ++s;
-    ++g;
-
-    // Print the argument, static and global variables
-    printf("Thread ID: %d, Static: %d, Global: %d\n", *myid, ++s, ++g);
+    /* Pour enlever le warning */
+    pthread_exit(NULL);
 }
 
-int main() {
-    int i;
-    pthread_t tid;
+int main(void) {
+    pthread_t thread1;
 
-    // Let us create three threads
-    for (i = 0; i < 3; i++)
-        pthread_create(&tid, NULL, myThreadFun, (void *)&tid);
+    printf("Avant la creation du thread.\n");
 
-    pthread_exit(NULL);
-    return 0;
+    int a = 5;
+    int *ptr = &a;
+
+    struct thread_args args;
+    args.a = 'a';
+    args.b = 5;
+    args.c = ptr;
+
+    printf("%d\n", a);
+
+    if (pthread_create(&thread1, NULL, thread_1, (void *)&args)) {
+        perror("pthread_create");
+        return EXIT_FAILURE;
+    }
+
+    if (pthread_join(thread1, NULL)) {
+        perror("pthread_join");
+        return EXIT_FAILURE;
+    }
+
+    printf("Apres la creation du thread.\n");
+    printf("%d\n", a);
+
+    return EXIT_SUCCESS;
 }
